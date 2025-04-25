@@ -2,7 +2,7 @@
 Pybind11 example plugin
 -----------------------
 
-.. currentmodule:: scikit_build_example
+.. currentmodule:: jsoncons
 
 .. autosummary::
     :toctree: _generate
@@ -16,4 +16,4 @@ def add(i: int, j: int) -> int:
     Add two numbers
 
     Some other explanation about the add function.
-    """
+    """ 
