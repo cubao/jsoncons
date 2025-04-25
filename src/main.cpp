@@ -126,7 +126,8 @@ PYBIND11_MODULE(_core, m) {
 
     py::class_<JsonQueryRepl>(m, "JsonQueryRepl", py::module_local(), py::dynamic_attr()) //
         .def(py::init<const std::string &, bool>(), "json"_a, "debug"_a = false)
-        .def("eval", &JsonQueryRepl::eval)
+        .def("eval", &JsonQueryRepl::eval, "expr"_a)
+        .def("add_params", &JsonQueryRepl::add_params, "key"_a, "value"_a)
         .def_readwrite("debug", &JsonQueryRepl::debug)
         //
         ;

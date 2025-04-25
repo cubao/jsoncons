@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 import jsoncons as m
 
 
@@ -56,6 +58,23 @@ def test_repl():
         r"[*].[let $home_state = home_state in states[? name == $home_state].cities[]][]"
     )
     assert ret == '[["Seattle","Bellevue","Olympia"],["New York City","Albany"]]'
+
+    data = {
+        "results": [
+            {"name": "test1", "uuid": "33bb9554-c616-42e6-a9c6-88d3bba4221c"},
+            {"name": "test2", "uuid": "acde070d-8c4c-4f0d-9d8a-162843c10333"},
+        ]
+    }
+    repl = m.JsonQueryRepl(json.dumps(data), debug=True)
+    with pytest.raises(RuntimeError) as excinfo:
+        repl.add_params("hostname", "localhost")
+    assert "JSON syntax_error" in repr(excinfo)
+    repl.add_params("hostname", json.dumps("localhost"))
+    ret = repl.eval("results[*].[name, uuid, $hostname]")
+    assert (
+        ret
+        == '[["test1","33bb9554-c616-42e6-a9c6-88d3bba4221c","localhost"],["test2","acde070d-8c4c-4f0d-9d8a-162843c10333","localhost"]]'
+    )
 
 
 # pytest -vs tests/test_basic.py
