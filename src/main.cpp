@@ -14,6 +14,7 @@
 #include <jsoncons_ext/msgpack/msgpack.hpp>
 
 #include <sstream>
+#include <memory>
 
 using jsoncons::json;
 namespace jmespath = jsoncons::jmespath;
@@ -47,14 +48,14 @@ struct JsonQueryRepl {
 struct JsonQuery {
     JsonQuery() {}
     void setup_predicate(const std::string &predicate) {
-        predicate_expr_ = std::move(jmespath::make_expression<json>(predicate));
+        predicate_expr_ = std::make_unique<jmespath::jmespath_expression<json>>(jmespath::make_expression<json>(predicate));
         predicate_ = predicate;
     }
     void setup_transforms(const std::vector<std::string> &transforms) {
         transforms_expr_.clear();
         transforms_expr_.reserve(transforms.size());
         for (auto &t: transforms) {
-            transforms_expr_.emplace_back(jmespath::make_expression<json>(t));
+            transforms_expr_.push_back(std::make_unique<jmespath::jmespath_expression<json>>(jmespath::make_expression<json>(t)));
         }
         transforms_ = transforms;
     }
@@ -64,7 +65,7 @@ struct JsonQuery {
     }
 
     bool process(const std::string &msg, bool skip_predicate = false) {
-        if (!skip_predicate) {
+        if (!skip_predicate && predicate_expr_) {
         }
 
         return {};
@@ -82,9 +83,9 @@ struct JsonQuery {
 
 private:
     std::string predicate_;
-    jmespath::jmespath_expression<json> predicate_expr_;
+    std::unique_ptr<jmespath::jmespath_expression<json>> predicate_expr_;
     std::vector<std::string> transforms_;
-    std::vector<jmespath::jmespath_expression<json>> transforms_expr_;
+    std::vector<std::unique_ptr<jmespath::jmespath_expression<json>>> transforms_expr_;
 
 
     std::vector<std::vector<json>> outputs_;
