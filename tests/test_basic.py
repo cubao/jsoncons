@@ -72,8 +72,10 @@ def test_repl():
 def test_msgpack():
     # https://msgpack.org/index.html
     data = m.msgpack_encode('{"compact":"true",         "schema":0}')
+    assert isinstance(data, bytes)
     print("msgpack #bytes", len(data))
     data = m.msgpack_decode(data)
+    assert isinstance(data, str)
     assert data == '{"compact":"true","schema":0}'
 
 

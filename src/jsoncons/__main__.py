@@ -15,7 +15,8 @@ def __msgpack_decode():
 def __msgpack_encode():
     data = sys.stdin.read()
     encoded = msgpack_encode(data)
-    sys.stdout.write(encoded)
+    # print(type(encoded), len(encoded))
+    sys.stdout.buffer.write(encoded)
 
 
 if __name__ == "__main__":
