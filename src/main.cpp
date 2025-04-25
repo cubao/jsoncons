@@ -13,12 +13,12 @@
 #include <jsoncons_ext/jmespath/jmespath.hpp>
 #include <jsoncons_ext/msgpack/msgpack.hpp>
 
-#include <sstream>
 #include <memory>
 #include <deque>
 
 using jsoncons::json;
 namespace jmespath = jsoncons::jmespath;
+namespace msgpack = jsoncons::msgpack;
 
 int add(int i, int j) {
     return i + j;
@@ -39,9 +39,7 @@ struct JsonQueryRepl {
         if (debug) {
             std::cerr << pretty_print(result) << std::endl;
         }
-        std::ostringstream os;
-        os << result;
-        return os.str();
+        return result.to_string();
     }
     void add_params(const std::string &key, const std::string &value) {
         params_[key] = json::parse(value);
@@ -93,8 +91,20 @@ struct JsonQuery {
         return true;
     }
 
-    std::string export_() const {
-        return "";
+    std::vector<uint8_t> export_() const {
+        json result = json::make_array();
+        result.reserve(outputs_.size());
+        for (const auto& row : outputs_) {
+            json json_row = json::make_array();
+            json_row.reserve(row.size());
+            for (const auto& cell : row) {
+                json_row.push_back(cell);
+            }
+            result.push_back(json_row);
+        }
+        std::vector<uint8_t> output;
+        msgpack::encode_msgpack(result, output);
+        return output;
     }
 
     void clear() {
@@ -114,7 +124,7 @@ private:
     std::deque<std::vector<json>> outputs_;
 
     bool __matches(const json &msg) const {
-        auto ret = predicate_expr_->evaluate(doc, params_);
+        auto ret = predicate_expr_->evaluate(msg, params_);
         return /*ret.is_bool() && */ ret.as_bool();
     }
 };
@@ -145,6 +155,14 @@ PYBIND11_MODULE(_core, m) {
         Some other explanation about the subtract function.
     )pbdoc");
 
+    // m.def("msgpack_encode", [](const std::string &input) {
+    //     return msgpack::encode_msgpack(json::parse(input));
+    // }, "json_string"_a);
+    // m.def("msgpack_decode", [](const std::string &input) {
+    //     auto doc = msgpack::decode_msgpack<json>(input);
+    //     return doc.to_string();
+    // }, "msgpack_bytes"_a);
+
     py::class_<JsonQueryRepl>(m, "JsonQueryRepl", py::module_local(), py::dynamic_attr()) //
         .def(py::init<const std::string &, bool>(), "json"_a, "debug"_a = false)
         .def("eval", &JsonQueryRepl::eval, "expr"_a)
@@ -160,6 +178,10 @@ PYBIND11_MODULE(_core, m) {
         .def("add_params", &JsonQuery::add_params, "key"_a, "value"_a)
         .def("matches", &JsonQuery::matches)
         .def("process", &JsonQuery::process)
+        .def("export", [](const JsonQuery& self) {
+            auto result = self.export_();
+            return py::bytes(reinterpret_cast<const char *>(result.data()), result.size());
+        }, "Export as bytes")
         .def("export", &JsonQuery::export_)
         .def_readwrite("debug", &JsonQuery::debug)
         //
