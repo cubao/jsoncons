@@ -6,7 +6,7 @@
 #include <jsoncons/json.hpp>
 #include <jsoncons_ext/jmespath/jmespath.hpp>
 
-using jsoncons::json; 
+using jsoncons::json;
 namespace jmespath = jsoncons::jmespath;
 
 int add(int i, int j) {
@@ -19,7 +19,7 @@ struct JsonQuery {
 
     JsonQuery() {}
     bool setup_predicate(const std::string &predicate) {
-        // auto expr = jmespath::make_expression<json>(predicate); 
+        // auto expr = jmespath::make_expression<json>(predicate);
         predicate_ = predicate;
         return true;
     }
