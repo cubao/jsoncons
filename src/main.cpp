@@ -1,3 +1,9 @@
+// https://github.com/microsoft/vscode-cpptools/issues/9692
+#if __INTELLISENSE__
+#undef __ARM_NEON
+#undef __ARM_NEON__
+#endif
+
 #include <pybind11/pybind11.h>
 
 #define STRINGIFY(x) #x
@@ -14,38 +20,68 @@ int add(int i, int j) {
 }
 
 namespace py = pybind11;
+using namespace pybind11::literals;
+
+// https://github.com/danielaparker/jsoncons/blob/master/doc/ref/jmespath/jmespath.md
+
+
+struct JsonQueryRepl {
+    JsonQueryRepl(const std::string &jsontext, bool debug = false): doc_(json::parse(jsontext)), debug(debug) { }
+    std::string eval(const std::string &expr) const {
+        auto result = jmespath::search(doc_, expr);
+        if (verbose) {
+            std::cerr << pretty_print(result) << std::endl;
+        }
+        return json::dump(result);
+    }
+    bool debug = false;
+    private:
+    json doc_;
+};
 
 struct JsonQuery {
-
     JsonQuery() {}
-    bool setup_predicate(const std::string &predicate) {
-        // auto expr = jmespath::make_expression<json>(predicate);
+    void setup_predicate(const std::string &predicate) {
+        predicate_expr_ = jmespath::make_expression<json>(predicate);
         predicate_ = predicate;
-        return true;
     }
-    bool setup_transforms(const std::vector<std::string> &transforms) {
+    void setup_transforms(const std::vector<std::string> &transforms) {
+        transforms_expr_.reserve(transforms.size());
+        for (auto &t: transforms) {
+            transforms_expr_.push_back(jmespath::make_expression<json>(t));
+        }
         transforms_ = transforms;
-        return true;
     }
 
     bool matches(const std::string &msg) const {
         return true;
     }
 
-    bool process(const std::string &key, const std::string &msg, bool skip_predicate = false) {
+    bool process(const std::string &msg, bool skip_predicate = false) {
+        if (!skip_predicate) {
+        }
+
         return {};
     }
 
-    std::string outputs() const {
+    std::string export_() const {
         return "";
     }
 
+    void clear() {
+        outputs_.clear();
+    }
+
+    bool debug = false;
+
 private:
     std::string predicate_;
+    jmespath_expression<json> predicate_expr_;
     std::vector<std::string> transforms_;
+    std::vector<jmespath_expression<json>> transforms_expr_;
 
 
-    std::vector<std::pair<std::string, std::string>> outputs_;
+    std::vector<std::vector<json>> outputs_;
 };
 
 PYBIND11_MODULE(_core, m) {
@@ -74,13 +110,23 @@ PYBIND11_MODULE(_core, m) {
         Some other explanation about the subtract function.
     )pbdoc");
 
-    py::class_<JsonQuery>(m, "JsonQuery", py::module_local()) //
+    py::class_<JsonQueryRepl>(m, "JsonQueryRepl", py::module_local(), py::dynamic_attr()) //
+        .def(py::init<const std::string &, bool>(), "json"_a, "debug"_a = false)
+        .def("eval", JsonQueryRepl::eval)
+        .def_readwrite("debug", &JsonQuery::debug)
+        //
+        ;
+
+    py::class_<JsonQuery>(m, "JsonQuery", py::module_local(), py::dynamic_attr()) //
         .def(py::init<>())
         .def("setup_predicate", &JsonQuery::setup_predicate)
         .def("setup_transforms", &JsonQuery::setup_transforms)
         .def("matches", &JsonQuery::matches)
-        .def("handle", &JsonQuery::handle)
-        .def("outputs", &JsonQuery::outputs);
+        .def("process", &JsonQuery::process)
+        .def("export", &JsonQuery::export_)
+        .def_readwrite("debug", &JsonQuery::debug)
+        //
+        ;
 
 
 
