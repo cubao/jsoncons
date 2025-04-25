@@ -155,13 +155,15 @@ PYBIND11_MODULE(_core, m) {
         Some other explanation about the subtract function.
     )pbdoc");
 
-    // m.def("msgpack_encode", [](const std::string &input) {
-    //     return msgpack::encode_msgpack(json::parse(input));
-    // }, "json_string"_a);
-    // m.def("msgpack_decode", [](const std::string &input) {
-    //     auto doc = msgpack::decode_msgpack<json>(input);
-    //     return doc.to_string();
-    // }, "msgpack_bytes"_a);
+    m.def("msgpack_encode", [](const std::string &input) {
+        std::vector<uint8_t> output;
+        msgpack::encode_msgpack(json::parse(input), output);
+        return py::bytes(reinterpret_cast<const char *>(output.data()), output.size());
+    }, "json_string"_a);
+    m.def("msgpack_decode", [](const std::string &input) {
+        auto doc = msgpack::decode_msgpack<json>(input);
+        return doc.to_string();
+    }, "msgpack_bytes"_a);
 
     py::class_<JsonQueryRepl>(m, "JsonQueryRepl", py::module_local(), py::dynamic_attr()) //
         .def(py::init<const std::string &, bool>(), "json"_a, "debug"_a = false)
@@ -179,8 +181,8 @@ PYBIND11_MODULE(_core, m) {
         .def("matches", &JsonQuery::matches)
         .def("process", &JsonQuery::process)
         .def("export", [](const JsonQuery& self) {
-            auto result = self.export_();
-            return py::bytes(reinterpret_cast<const char *>(result.data()), result.size());
+            auto output = self.export_();
+            return py::bytes(reinterpret_cast<const char *>(output.data()), output.size());
         }, "Export as bytes")
         .def("export", &JsonQuery::export_)
         .def_readwrite("debug", &JsonQuery::debug)
