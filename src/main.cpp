@@ -15,6 +15,7 @@
 
 #include <sstream>
 #include <memory>
+#include <deque>
 
 using jsoncons::json;
 namespace jmespath = jsoncons::jmespath;
@@ -75,15 +76,21 @@ struct JsonQuery {
             return false;
         }
         auto doc = msgpack::decode_msgpack<json>(msg);
-        auto ret = predicate_expr_->evaluate(doc, params_);
-        return /*ret.is_bool() && */ ret.as_bool();
+        return __matches(doc);
     }
 
     bool process(const std::string &msg, bool skip_predicate = false) {
-        if (!skip_predicate && predicate_expr_) {
+        auto doc = msgpack::decode_msgpack<json>(msg);
+        if (!skip_predicate && !__matches(doc)) {
+            return false;
         }
-
-        return {};
+        std::vector<json> row;
+        row.reserve(transforms_expr_.size());
+        for (auto &expr: transforms_expr_) {
+            row.push_back(expr->evaluate(doc, params_));
+        }
+        outputs_.emplace_back(std::move(row));
+        return true;
     }
 
     std::string export_() const {
@@ -104,7 +111,12 @@ private:
     std::map<std::string, json> params_;
 
 
-    std::vector<std::vector<json>> outputs_;
+    std::deque<std::vector<json>> outputs_;
+
+    bool __matches(const json &msg) const {
+        auto ret = predicate_expr_->evaluate(doc, params_);
+        return /*ret.is_bool() && */ ret.as_bool();
+    }
 };
 
 PYBIND11_MODULE(_core, m) {
