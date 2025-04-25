@@ -1,8 +1,22 @@
 from __future__ import annotations
 
 import os
+import sys
 
-from . import add, subtract
+from . import msgpack_decode, msgpack_encode
+
+
+def __msgpack_decode():
+    data = sys.stdin.read()
+    decoded = msgpack_decode(data)
+    sys.stdout.write(decoded)
+
+
+def __msgpack_encode():
+    data = sys.stdin.read()
+    encoded = msgpack_encode(data)
+    sys.stdout.write(encoded)
+
 
 if __name__ == "__main__":
     os.umask(0)
@@ -11,7 +25,7 @@ if __name__ == "__main__":
     fire.core.Display = lambda lines, out: print(*lines, file=out)
     fire.Fire(
         {
-            "add": add,
-            "subtract": subtract,
+            "msgpack_decode": __msgpack_decode,
+            "msgpack_encode": __msgpack_encode,
         }
     )
