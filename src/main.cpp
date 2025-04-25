@@ -66,9 +66,17 @@ struct JsonQuery {
         }
         transforms_ = transforms;
     }
+    void add_params(const std::string &key, const std::string &value) {
+        params_[key] = json::parse(value);
+    }
 
     bool matches(const std::string &msg) const {
-        return true;
+        if (!predicate_expr_) {
+            return false;
+        }
+        auto doc = msgpack::decode_msgpack<json>(msg);
+        auto ret = predicate_expr_->evaluate(doc, params_);
+        return /*ret.is_bool() && */ ret.as_bool();
     }
 
     bool process(const std::string &msg, bool skip_predicate = false) {
@@ -93,6 +101,7 @@ private:
     std::unique_ptr<jmespath::jmespath_expression<json>> predicate_expr_;
     std::vector<std::string> transforms_;
     std::vector<std::unique_ptr<jmespath::jmespath_expression<json>>> transforms_expr_;
+    std::map<std::string, json> params_;
 
 
     std::vector<std::vector<json>> outputs_;
@@ -136,6 +145,7 @@ PYBIND11_MODULE(_core, m) {
         .def(py::init<>())
         .def("setup_predicate", &JsonQuery::setup_predicate)
         .def("setup_transforms", &JsonQuery::setup_transforms)
+        .def("add_params", &JsonQuery::add_params, "key"_a, "value"_a)
         .def("matches", &JsonQuery::matches)
         .def("process", &JsonQuery::process)
         .def("export", &JsonQuery::export_)
