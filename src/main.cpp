@@ -31,8 +31,10 @@ using namespace pybind11::literals;
 
 struct JsonQueryRepl {
     JsonQueryRepl(const std::string &jsontext, bool debug = false): doc_(json::parse(jsontext)), debug(debug) { }
-    std::string eval(const std::string &expr) const {
-        auto result = jmespath::search(doc_, expr);
+    std::string eval(const std::string &expr_text) const {
+        // auto result = jmespath::search(doc_, expr);
+        auto expr = jmespath::make_expression<json>(expr_text);
+        auto result = expr.evaluate(doc_, params_);
         if (debug) {
             std::cerr << pretty_print(result) << std::endl;
         }
@@ -40,9 +42,14 @@ struct JsonQueryRepl {
         os << result;
         return os.str();
     }
+    void add_params(const std::string &key, const std::string &value) {
+        params_[key] = json::parse(value);
+    }
+
     bool debug = false;
     private:
     json doc_;
+    std::map<std::string, json> params_;
 };
 
 struct JsonQuery {
