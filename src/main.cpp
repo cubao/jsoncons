@@ -23,7 +23,6 @@ struct JsonQuery {
         predicate_ = predicate;
         return true;
     }
-
     bool setup_transforms(const std::vector<std::string> &transforms) {
         transforms_ = transforms;
         return true;
@@ -33,7 +32,7 @@ struct JsonQuery {
         return true;
     }
 
-    bool handle(const std::string &key, const std::string &msg, bool skip_predicate = false) {
+    bool process(const std::string &key, const std::string &msg, bool skip_predicate = false) {
         return {};
     }
 
@@ -74,6 +73,16 @@ PYBIND11_MODULE(_core, m) {
 
         Some other explanation about the subtract function.
     )pbdoc");
+
+    py::class_<JsonQuery>(m, "JsonQuery", py::module_local()) //
+        .def(py::init<>())
+        .def("setup_predicate", &JsonQuery::setup_predicate)
+        .def("setup_transforms", &JsonQuery::setup_transforms)
+        .def("matches", &JsonQuery::matches)
+        .def("handle", &JsonQuery::handle)
+        .def("outputs", &JsonQuery::outputs);
+
+
 
 #ifdef VERSION_INFO
     m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);
