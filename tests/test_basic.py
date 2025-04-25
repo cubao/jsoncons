@@ -11,14 +11,6 @@ def test_version():
     assert m.__version__ == "0.0.1"
 
 
-def test_add():
-    assert m.add(1, 2) == 3
-
-
-def test_sub():
-    assert m.subtract(1, 2) == -1
-
-
 def test_repl():
     # https://github.com/danielaparker/jsoncons/blob/master/doc/ref/jmespath/jmespath.md
     data = {
@@ -78,7 +70,11 @@ def test_repl():
 
 
 def test_msgpack():
-    print()
+    # https://msgpack.org/index.html
+    data = m.msgpack_encode('{"compact":"true",         "schema":0}')
+    print("msgpack #bytes", len(data))
+    data = m.msgpack_decode(data)
+    assert data == '{"compact":"true","schema":0}'
 
 
 # pytest -vs tests/test_basic.py

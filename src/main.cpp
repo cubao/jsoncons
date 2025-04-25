@@ -143,18 +143,6 @@ PYBIND11_MODULE(_core, m) {
            subtract
     )pbdoc";
 
-    m.def("add", &add, R"pbdoc(
-        Add two numbers
-
-        Some other explanation about the add function.
-    )pbdoc");
-
-    m.def("subtract", [](int i, int j) { return i - j; }, R"pbdoc(
-        Subtract two numbers
-
-        Some other explanation about the subtract function.
-    )pbdoc");
-
     m.def("msgpack_encode", [](const std::string &input) {
         std::vector<uint8_t> output;
         msgpack::encode_msgpack(json::parse(input), output);
