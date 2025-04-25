@@ -11,6 +11,9 @@
 
 #include <jsoncons/json.hpp>
 #include <jsoncons_ext/jmespath/jmespath.hpp>
+#include <jsoncons_ext/msgpack/msgpack.hpp>
+
+#include <sstream>
 
 using jsoncons::json;
 namespace jmespath = jsoncons::jmespath;
@@ -29,10 +32,12 @@ struct JsonQueryRepl {
     JsonQueryRepl(const std::string &jsontext, bool debug = false): doc_(json::parse(jsontext)), debug(debug) { }
     std::string eval(const std::string &expr) const {
         auto result = jmespath::search(doc_, expr);
-        if (verbose) {
+        if (debug) {
             std::cerr << pretty_print(result) << std::endl;
         }
-        return json::dump(result);
+        std::ostringstream os;
+        os << result;
+        return os.str();
     }
     bool debug = false;
     private:
@@ -42,13 +47,13 @@ struct JsonQueryRepl {
 struct JsonQuery {
     JsonQuery() {}
     void setup_predicate(const std::string &predicate) {
-        predicate_expr_ = jmespath::make_expression<json>(predicate);
+        // predicate_expr_ = std::move(jmespath::make_expression<json>(predicate));
         predicate_ = predicate;
     }
     void setup_transforms(const std::vector<std::string> &transforms) {
         transforms_expr_.reserve(transforms.size());
         for (auto &t: transforms) {
-            transforms_expr_.push_back(jmespath::make_expression<json>(t));
+            transforms_expr_.emplace_back(jmespath::make_expression<json>(t));
         }
         transforms_ = transforms;
     }
@@ -76,9 +81,9 @@ struct JsonQuery {
 
 private:
     std::string predicate_;
-    jmespath_expression<json> predicate_expr_;
+    jmespath::jmespath_expression<json> predicate_expr_;
     std::vector<std::string> transforms_;
-    std::vector<jmespath_expression<json>> transforms_expr_;
+    std::vector<jmespath::jmespath_expression<json>> transforms_expr_;
 
 
     std::vector<std::vector<json>> outputs_;
@@ -112,8 +117,8 @@ PYBIND11_MODULE(_core, m) {
 
     py::class_<JsonQueryRepl>(m, "JsonQueryRepl", py::module_local(), py::dynamic_attr()) //
         .def(py::init<const std::string &, bool>(), "json"_a, "debug"_a = false)
-        .def("eval", JsonQueryRepl::eval)
-        .def_readwrite("debug", &JsonQuery::debug)
+        .def("eval", &JsonQueryRepl::eval)
+        .def_readwrite("debug", &JsonQueryRepl::debug)
         //
         ;
 
