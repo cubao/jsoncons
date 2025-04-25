@@ -3,11 +3,51 @@
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
 
+#include <jsoncons/json.hpp>
+#include <jsoncons_ext/jmespath/jmespath.hpp>
+
+using jsoncons::json; 
+namespace jmespath = jsoncons::jmespath;
+
 int add(int i, int j) {
     return i + j;
 }
 
 namespace py = pybind11;
+
+struct JsonQuery {
+
+    JsonQuery() {}
+    bool setup_predicate(const std::string &predicate) {
+        // auto expr = jmespath::make_expression<json>(predicate); 
+        predicate_ = predicate;
+        return true;
+    }
+
+    bool setup_transforms(const std::vector<std::string> &transforms) {
+        transforms_ = transforms;
+        return true;
+    }
+
+    bool matches(const std::string &msg) const {
+        return true;
+    }
+
+    bool handle(const std::string &key, const std::string &msg, bool skip_predicate = false) {
+        return {};
+    }
+
+    std::string outputs() const {
+        return "";
+    }
+
+private:
+    std::string predicate_;
+    std::vector<std::string> transforms_;
+
+
+    std::vector<std::pair<std::string, std::string>> outputs_;
+};
 
 PYBIND11_MODULE(_core, m) {
     m.doc() = R"pbdoc(
