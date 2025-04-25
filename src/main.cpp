@@ -47,10 +47,11 @@ struct JsonQueryRepl {
 struct JsonQuery {
     JsonQuery() {}
     void setup_predicate(const std::string &predicate) {
-        // predicate_expr_ = std::move(jmespath::make_expression<json>(predicate));
+        predicate_expr_ = std::move(jmespath::make_expression<json>(predicate));
         predicate_ = predicate;
     }
     void setup_transforms(const std::vector<std::string> &transforms) {
+        transforms_expr_.clear();
         transforms_expr_.reserve(transforms.size());
         for (auto &t: transforms) {
             transforms_expr_.emplace_back(jmespath::make_expression<json>(t));
