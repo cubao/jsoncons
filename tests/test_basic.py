@@ -77,4 +77,8 @@ def test_repl():
     )
 
 
+def test_msgpack():
+    print()
+
+
 # pytest -vs tests/test_basic.py
