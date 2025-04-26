@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import json
 
-import pybind11_jsoncons as m
 import pytest
+
+import pybind11_jsoncons as m
 
 
 def test_version():
