@@ -36,6 +36,7 @@ project(
   VERSION ${SKBUILD_PROJECT_VERSION}
   LANGUAGES CXX)
 
+set(CMAKE_CXX_STANDARD 17)
 # Find the module development requirements (requires FindPython from 3.17 or
 # scikit-build-core's built-in backport)
 find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
