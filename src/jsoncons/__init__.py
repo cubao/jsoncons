@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from ._core import (
+    Json,
     JsonQuery,
     JsonQueryRepl,
     __doc__,
@@ -14,6 +15,7 @@ __all__ = [
     "__version__",
     "JsonQuery",
     "JsonQueryRepl",
+    "Json",
     "msgpack_decode",
     "msgpack_encode",
 ]
