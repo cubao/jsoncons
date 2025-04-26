@@ -2,7 +2,7 @@
 Pybind11 bindings for jsoncons
 ------------------------------
 
-.. currentmodule:: jsoncons
+.. currentmodule:: pybind11_jsoncons
 
 .. autosummary::
     :toctree: _generate
