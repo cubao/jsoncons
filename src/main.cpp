@@ -154,6 +154,10 @@ PYBIND11_MODULE(_core, m) {
         return doc.to_string();
     }, "msgpack_bytes"_a);
 
+    py::class_<json>(m, "json", py::module_local(), py::dynamic_attr()) //
+    //
+    ;
+
     py::class_<JsonQueryRepl>(m, "JsonQueryRepl", py::module_local(), py::dynamic_attr()) //
         .def(py::init<const std::string &, bool>(), "json"_a, "debug"_a = false)
         .def("eval", &JsonQueryRepl::eval, "expr"_a)
