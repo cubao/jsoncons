@@ -57,6 +57,8 @@ jobs:
       env:
         CIBW_ENABLE: cpython-prerelease
         CIBW_ARCHS_WINDOWS: auto ARM64
+        CIBW_SKIP: pp* *i686
+        CIBW_TEST_SKIP: "*macosx* *win* *aarch64"
 
     - name: Verify clean directory
       run: git diff --exit-code
@@ -97,3 +99,4 @@ jobs:
     - uses: pypa/gh-action-pypi-publish@release/v1
       with:
         attestations: true
+        password: ${{ secrets.PYPI_API_TOKEN }}
