@@ -116,5 +116,22 @@ def test_json_type():
     assert obj.to_msgpack() == obj2.to_msgpack()
 
 
+def test_json_query_json():
+    people = [
+        {"age": 5, "other": "too young", "name": "Baby"},
+        {"age": 20, "other": "foo", "name": "Bob"},
+        {"age": 25, "other": "bar", "name": "Fred"},
+        {"age": 30, "other": "baz", "name": "George"},
+    ]
+
+    jql = m.JsonQuery()
+    jql.setup_predicate("age >= `18`")
+    jql.setup_transforms(["name", "age"])
+    for p in people:
+        j = m.Json().from_json(json.dumps(p))
+        print(p, jql.process_json(j))
+    export = jql.export_json()
+    assert json.loads(export.to_json()) == [["Bob", 20], ["Fred", 25], ["George", 30]]
+
+
 # pytest -vs tests/test_basic.py
-test_json_type()
