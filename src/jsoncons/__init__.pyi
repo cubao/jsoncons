@@ -14,7 +14,9 @@ Pybind11 bindings for jsoncons
     msgpack_encode
 """
 
-from typing import List, overload
+from __future__ import annotations
+
+from typing import overload
 
 __doc__: str
 __version__: str
@@ -130,12 +132,12 @@ class JsonQuery:
             predicate: JMESPath predicate expression
         """
 
-    def setup_transforms(self, transforms: List[str]) -> None:
+    def setup_transforms(self, transforms: list[str]) -> None:
         """
         Set up transform expressions used for data transformation.
 
         Args:
-            transforms: List of JMESPath transform expressions
+            transforms: list of JMESPath transform expressions
         """
 
     def add_params(self, key: str, value: str) -> None:
