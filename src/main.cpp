@@ -154,16 +154,19 @@ private:
 
 PYBIND11_MODULE(_core, m) {
     m.doc() = R"pbdoc(
-        Pybind11 example plugin
-        -----------------------
+    Python bindings for jsoncons library
 
-        .. currentmodule:: jsoncons
+    This module provides Python bindings for the jsoncons C++ library, allowing for
+    efficient JSON processing, filtering, and transformation using JMESPath expressions.
 
-        .. autosummary::
-           :toctree: _generate
+    Classes:
+        Json: A class for handling JSON data with conversion to/from JSON and MessagePack formats.
+        JsonQueryRepl: A REPL (Read-Eval-Print Loop) for evaluating JMESPath expressions on JSON data.
+        JsonQuery: A class for filtering and transforming JSON data using JMESPath expressions.
 
-           add
-           subtract
+    Functions:
+        msgpack_encode: Convert a JSON string to MessagePack binary format.
+        msgpack_decode: Convert MessagePack binary data to a JSON string.
     )pbdoc";
 
     m.def("msgpack_encode", [](const std::string &input) {
