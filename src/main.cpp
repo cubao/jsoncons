@@ -242,33 +242,6 @@ PYBIND11_MODULE(_core, m) {
         msgpack_decode: Convert MessagePack binary data to a JSON string.
     )pbdoc";
 
-    m.def("msgpack_encode", [](const std::string &input) {
-        std::vector<uint8_t> output;
-        msgpack::encode_msgpack(json::parse(input), output);
-        return py::bytes(reinterpret_cast<const char *>(output.data()), output.size());
-    }, "json_string"_a, R"pbdoc(
-        Convert a JSON string to MessagePack binary format.
-
-        Args:
-            json_string: JSON string to encode
-
-        Returns:
-            bytes: MessagePack binary data
-    )pbdoc");
-
-    m.def("msgpack_decode", [](const std::string &input) {
-        auto doc = msgpack::decode_msgpack<json>(input);
-        return doc.to_string();
-    }, "msgpack_bytes"_a, R"pbdoc(
-        Convert MessagePack binary data to a JSON string.
-
-        Args:
-            msgpack_bytes: MessagePack binary data
-
-        Returns:
-            str: JSON string representation
-    )pbdoc");
-
     py::class_<json>(m, "Json", py::module_local(), py::dynamic_attr()) //
     .def(py::init<>(), R"pbdoc(
         Create a new Json object.
@@ -439,6 +412,32 @@ PYBIND11_MODULE(_core, m) {
         ;
 
 
+    m.def("msgpack_encode", [](const std::string &input) {
+        std::vector<uint8_t> output;
+        msgpack::encode_msgpack(json::parse(input), output);
+        return py::bytes(reinterpret_cast<const char *>(output.data()), output.size());
+    }, "json_string"_a, R"pbdoc(
+        Convert a JSON string to MessagePack binary format.
+
+        Args:
+            json_string: JSON string to encode
+
+        Returns:
+            bytes: MessagePack binary data
+    )pbdoc");
+
+    m.def("msgpack_decode", [](const std::string &input) {
+        auto doc = msgpack::decode_msgpack<json>(input);
+        return doc.to_string();
+    }, "msgpack_bytes"_a, R"pbdoc(
+        Convert MessagePack binary data to a JSON string.
+
+        Args:
+            msgpack_bytes: MessagePack binary data
+
+        Returns:
+            str: JSON string representation
+    )pbdoc");
 
 #ifdef VERSION_INFO
     m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);
