@@ -109,4 +109,10 @@ def test_json_query():
     assert json.loads(data) == [["Bob", 20], ["Fred", 25], ["George", 30]]
 
 
+def test_json_type():
+    data = m.json().from_json('{"compact":"true",         "schema":0}')
+    print()
+
+
 # pytest -vs tests/test_basic.py
+test_json_type()

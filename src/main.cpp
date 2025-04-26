@@ -26,6 +26,7 @@ int add(int i, int j) {
 }
 
 namespace py = pybind11;
+using rvp = py::return_value_policy;
 using namespace pybind11::literals;
 
 // https://github.com/danielaparker/jsoncons/blob/master/doc/ref/jmespath/jmespath.md
@@ -154,7 +155,26 @@ PYBIND11_MODULE(_core, m) {
         return doc.to_string();
     }, "msgpack_bytes"_a);
 
-    py::class_<json>(m, "json", py::module_local(), py::dynamic_attr()) //
+    py::class_<json>(m, "Json", py::module_local(), py::dynamic_attr()) //
+    .def(py::init<>())
+    // from/to_json
+    .def("from_json", [](json &self, const std::string &input) -> json & {
+        self = json::parse(input);
+        return self;
+    }, "json_string"_a, rvp::reference_internal)
+    .def("to_json", [](const json &input) {
+        return input.to_string();
+    })
+    // from/to_msgpack
+    .def("from_msgpack", [](json &self, const std::string &input) -> json & {
+        self = msgpack::decode_msgpack<json>(input);
+        return self;
+    }, "msgpack_bytes"_a, rvp::reference_internal)
+    .def("to_msgpack", [](const json &self) {
+        std::vector<uint8_t> output;
+        msgpack::encode_msgpack(input, output);
+        return py::bytes(reinterpret_cast<const char *>(output.data()), output.size());
+    })
     //
     ;
 
