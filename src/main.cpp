@@ -5,6 +5,7 @@
 #endif
 
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
@@ -166,8 +167,8 @@ PYBIND11_MODULE(_core, m) {
         .def("setup_predicate", &JsonQuery::setup_predicate)
         .def("setup_transforms", &JsonQuery::setup_transforms)
         .def("add_params", &JsonQuery::add_params, "key"_a, "value"_a)
-        .def("matches", &JsonQuery::matches)
-        .def("process", &JsonQuery::process)
+        .def("matches", &JsonQuery::matches, "msgpack"_a)
+        .def("process", &JsonQuery::process, "msgpack"_a, "skip_predicate"_a = false)
         .def("export", [](const JsonQuery& self) {
             auto output = self.export_();
             return py::bytes(reinterpret_cast<const char *>(output.data()), output.size());
