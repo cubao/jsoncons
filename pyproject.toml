@@ -5,12 +5,12 @@ build-backend = "scikit_build_core.build"
 
 
 [project]
-name = "jsoncons"
+name = "pybind11_jsoncons"
 version = "0.0.1"
 description="python binding for jsoncons (only what I needed for now)"
 readme = "README.md"
 authors = [
-  { name = "zhixiong.tang", email = "me@email.com" },
+  { name = "zhixiong.tang", email = "dvorak4tzx@email.com" },
 ]
 requires-python = ">=3.7"
 classifiers = [
@@ -25,6 +25,9 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
 ]
+
+[project.urls]
+Homepage = "https://github.com/cubao/jsoncons"
 
 [project.optional-dependencies]
 test = ["pytest"]
