@@ -79,21 +79,39 @@ struct JsonQuery {
         return __matches(doc);
     }
 
-    bool process(const std::string &msg, bool skip_predicate = false) {
+    bool matches_json(const json &doc) const {
+        if (!predicate_expr_) {
+            return false;
+        }
+        return __matches(doc);
+    }
+
+    bool process(const std::string &msg, bool skip_predicate = false, bool raise_error = false) {
         auto doc = msgpack::decode_msgpack<json>(msg);
+        return process_json(doc, skip_predicate, raise_error);
+    }
+
+    bool process_json(const json &doc, bool skip_predicate = false, bool raise_error = false) {
         if (!skip_predicate && !__matches(doc)) {
             return false;
         }
         std::vector<json> row;
         row.reserve(transforms_expr_.size());
         for (auto &expr: transforms_expr_) {
-            row.push_back(expr->evaluate(doc, params_));
+            try {
+                row.push_back(expr->evaluate(doc, params_));
+            } catch (const std::exception &e) {
+                if (raise_error) {
+                    throw e;
+                }
+                row.push_back(json::null());
+            }
         }
         outputs_.emplace_back(std::move(row));
         return true;
     }
 
-    std::vector<uint8_t> export_() const {
+    json export_json() const {
         json result = json::make_array();
         result.reserve(outputs_.size());
         for (const auto& row : outputs_) {
@@ -104,8 +122,11 @@ struct JsonQuery {
             }
             result.push_back(json_row);
         }
+        return result;
+    }
+    std::vector<uint8_t> export_() const {
         std::vector<uint8_t> output;
-        msgpack::encode_msgpack(result, output);
+        msgpack::encode_msgpack(export_json(), output);
         return output;
     }
 
@@ -192,12 +213,14 @@ PYBIND11_MODULE(_core, m) {
         .def("setup_transforms", &JsonQuery::setup_transforms)
         .def("add_params", &JsonQuery::add_params, "key"_a, "value"_a)
         .def("matches", &JsonQuery::matches, "msgpack"_a)
-        .def("process", &JsonQuery::process, "msgpack"_a, "skip_predicate"_a = false)
+        .def("matches_json", &JsonQuery::matches_json, "json"_a)
+        .def("process", &JsonQuery::process, "msgpack"_a, py::kw_only(), "skip_predicate"_a = false, "raise_error"_a = false)
+        .def("process_json", &JsonQuery::process_json, "msgpack"_a, py::kw_only(), "skip_predicate"_a = false, "raise_error"_a = false)
         .def("export", [](const JsonQuery& self) {
             auto output = self.export_();
             return py::bytes(reinterpret_cast<const char *>(output.data()), output.size());
         }, "Export as bytes")
-        .def("export", &JsonQuery::export_)
+        .def("export_json", &JsonQuery::export_json, "Export as json")
         .def_readwrite("debug", &JsonQuery::debug)
         //
         ;
