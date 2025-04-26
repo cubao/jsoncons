@@ -110,8 +110,10 @@ def test_json_query():
 
 
 def test_json_type():
-    data = m.json().from_json('{"compact":"true",         "schema":0}')
-    print()
+    obj = m.Json().from_json('{"compact":"true",         "schema":0}')
+    assert obj.to_json() == '{"compact":"true","schema":0}'
+    obj2 = m.Json().from_msgpack(obj.to_msgpack())
+    assert obj.to_msgpack() == obj2.to_msgpack()
 
 
 # pytest -vs tests/test_basic.py

@@ -162,8 +162,8 @@ PYBIND11_MODULE(_core, m) {
         self = json::parse(input);
         return self;
     }, "json_string"_a, rvp::reference_internal)
-    .def("to_json", [](const json &input) {
-        return input.to_string();
+    .def("to_json", [](const json &self) {
+        return self.to_string();
     })
     // from/to_msgpack
     .def("from_msgpack", [](json &self, const std::string &input) -> json & {
@@ -172,7 +172,7 @@ PYBIND11_MODULE(_core, m) {
     }, "msgpack_bytes"_a, rvp::reference_internal)
     .def("to_msgpack", [](const json &self) {
         std::vector<uint8_t> output;
-        msgpack::encode_msgpack(input, output);
+        msgpack::encode_msgpack(self, output);
         return py::bytes(reinterpret_cast<const char *>(output.data()), output.size());
     })
     //
