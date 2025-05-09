@@ -331,6 +331,9 @@ struct JsonQuery {
         if (!skip_predicate && !__matches(doc)) {
             return false;
         }
+        if (transforms_expr_.empty()) {
+            throw std::runtime_error("No transform expressions set");
+        }
         std::vector<json> row;
         row.reserve(transforms_expr_.size());
         for (auto &expr: transforms_expr_) {
@@ -550,13 +553,13 @@ PYBIND11_MODULE(_core, m) {
         .def(py::init<>(), R"pbdoc(
             Create a new JsonQuery instance.
         )pbdoc")
-        .def("setup_predicate", &JsonQuery::setup_predicate, R"pbdoc(
+        .def("setup_predicate", &JsonQuery::setup_predicate, "predicate"_a, R"pbdoc(
             Set up the predicate expression used for filtering.
 
             Args:
                 predicate: JMESPath predicate expression
         )pbdoc")
-        .def("setup_transforms", &JsonQuery::setup_transforms, R"pbdoc(
+        .def("setup_transforms", &JsonQuery::setup_transforms, "transforms"_a, R"pbdoc(
             Set up transform expressions used for data transformation.
 
             Args:
