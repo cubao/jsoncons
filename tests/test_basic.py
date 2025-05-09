@@ -135,3 +135,6 @@ def test_json_query_json():
 
 
 # pytest -vs tests/test_basic.py
+
+m.testme({"key": 5, "aa": 6})
+print()

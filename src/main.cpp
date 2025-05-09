@@ -17,7 +17,8 @@
 #include <memory>
 #include <deque>
 
-using jsoncons::json;
+using json = jsoncons::json;
+// using json = jsoncons::ojson;
 namespace jmespath = jsoncons::jmespath;
 namespace msgpack = jsoncons::msgpack;
 
@@ -29,7 +30,7 @@ using namespace pybind11::literals;
 // https://github.com/pybind/pybind11_json/blob/master/include/pybind11_json/pybind11_json.hpp
 namespace pyjson
 {
-    inline py::object from_json(const jsoncons::json& j)
+    inline py::object from_json(const json& j)
     {
         if (j.is_null())
         {
@@ -75,11 +76,11 @@ namespace pyjson
         }
     }
 
-    inline jsoncons::json to_json(const py::handle& obj, std::set<const PyObject*>& refs)
+    inline json to_json(const py::handle& obj, std::set<const PyObject*>& refs)
     {
         if (obj.ptr() == nullptr || obj.is_none())
         {
-            return jsoncons::json::null();
+            return json::null();
         }
         if (py::isinstance<py::bool_>(obj))
         {
@@ -131,7 +132,7 @@ namespace pyjson
                 throw std::runtime_error("Circular reference detected");
             }
 
-            auto out = jsoncons::json::array();
+            auto out = json::array();
             for (const py::handle value : obj)
             {
                 out.push_back(to_json(value, refs));
@@ -148,10 +149,10 @@ namespace pyjson
                 throw std::runtime_error("Circular reference detected");
             }
 
-            auto out = jsoncons::json::object();
+            auto out = json::object();
             for (const py::handle key : obj)
             {
-                // out[py::str(key).cast<std::string>()] = to_json(obj[key], refs);
+                out.try_emplace(py::str(key).cast<std::string>(), to_json(obj[key], refs));
             }
 
             refs.erase(insert_ret.first);
@@ -162,7 +163,7 @@ namespace pyjson
         throw std::runtime_error("to_json not implemented for this type of object: " + py::repr(obj).cast<std::string>());
     }
 
-    inline jsoncons::json to_json(const py::handle& obj)
+    inline json to_json(const py::handle& obj)
     {
         std::set<const PyObject*> refs;
         return to_json(obj, refs);
@@ -170,9 +171,9 @@ namespace pyjson
 }
 
 namespace pybind11 { namespace detail {
-    template <> struct type_caster<jsoncons::json> {
+    template <> struct type_caster<json> {
     public:
-        PYBIND11_TYPE_CASTER(jsoncons::json, _("json"));
+        PYBIND11_TYPE_CASTER(json, _("json"));
 
         bool load(handle src, bool)
         {
@@ -187,7 +188,7 @@ namespace pybind11 { namespace detail {
             }
         }
 
-        static handle cast(jsoncons::json src, return_value_policy /* policy */, handle /* parent */)
+        static handle cast(json src, return_value_policy /* policy */, handle /* parent */)
         {
             object obj = pyjson::from_json(src);
             return obj.release();
@@ -606,6 +607,13 @@ PYBIND11_MODULE(_core, m) {
         Returns:
             str: JSON string representation
     )pbdoc");
+
+    m.def("dumps", [](const json &json_val) -> std::string {
+        return json_val.to_string();
+    });
+    m.def("loads", [](const std::string &json_text) -> std::string {
+        return json::parse(json_text);
+    });
 
 #ifdef VERSION_INFO
     m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);

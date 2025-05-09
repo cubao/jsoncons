@@ -6,6 +6,8 @@ from ._core import (
     JsonQueryRepl,
     __doc__,
     __version__,
+    dumps,
+    loads,
     msgpack_decode,
     msgpack_encode,
 )
@@ -18,4 +20,6 @@ __all__ = [
     "Json",
     "msgpack_decode",
     "msgpack_encode",
+    "loads",
+    "dumps",
 ]
