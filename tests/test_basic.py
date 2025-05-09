@@ -118,6 +118,15 @@ def test_json_type():
     assert obj.to_json() == '{"b":4,"a":2}'
     assert obj.to_python() == {"b": 4, "a": 2}
 
+    obj = {"key": "value"}
+    obj["self"] = obj
+    with pytest.raises(ValueError) as excinfo:  # noqa: PT011
+        json.dumps(obj)
+    assert "Circular reference detected" in repr(excinfo)
+    with pytest.raises(RuntimeError) as excinfo:
+        m.Json().from_python(obj)
+    assert "Circular reference detected" in repr(excinfo)
+
 
 def test_json_query_json():
     people = [

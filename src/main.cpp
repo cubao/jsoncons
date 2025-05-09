@@ -169,6 +169,7 @@ namespace pyjson
     }
 }
 
+/*
 namespace pybind11 { namespace detail {
     template <> struct type_caster<json> {
     public:
@@ -196,6 +197,7 @@ namespace pybind11 { namespace detail {
         }
     };
 }} // namespace pybind11::detail
+*/
 
 /**
  * A REPL (Read-Eval-Print Loop) for evaluating JMESPath expressions on JSON data.
@@ -421,13 +423,43 @@ PYBIND11_MODULE(_core, m) {
         self = pyjson::to_json(obj);
         return self;
     }, "object"_a, rvp::reference_internal, R"pbdoc(
-        TODO
+        Convert a Python object to a JSON object.
+
+        This method converts various Python types to their JSON equivalents:
+        - None -> null
+        - bool -> boolean
+        - int -> integer
+        - float -> number
+        - str -> string
+        - list/tuple -> array
+        - dict -> object
+
+        Args:
+            object: Python object to convert
+
+        Returns:
+            Json: Reference to self with converted data
+
+        Raises:
+            RuntimeError: If the Python object contains circular references or unsupported types
     )pbdoc")
     .def("to_python", [](const json &self) -> py::handle {
         py::object obj = pyjson::from_json(self);
         return obj.release();
     }, R"pbdoc(
-        TODO
+        Convert a JSON object to a Python object.
+
+        This method converts JSON types to their Python equivalents:
+        - null -> None
+        - boolean -> bool
+        - integer -> int
+        - number -> float
+        - string -> str
+        - array -> list
+        - object -> dict
+
+        Returns:
+            object: Python object representation of the JSON data
     )pbdoc")
 
     // from/to_json
