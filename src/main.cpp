@@ -41,11 +41,11 @@ namespace pyjson
         }
         else if (j.is_int64())
         {
-            return py::int_(j.as_int64());
+            return py::int_(j.as_integer<int64_t>());
         }
         else if (j.is_uint64())
         {
-            return py::int_(j.as_uint64());
+            return py::int_(j.as_integer<uint64_t>());
         }
         else if (j.is_double())
         {
@@ -151,7 +151,7 @@ namespace pyjson
             auto out = jsoncons::json::object();
             for (const py::handle key : obj)
             {
-                out[py::str(key).cast<std::string>()] = to_json(obj[key], refs);
+                // out[py::str(key).cast<std::string>()] = to_json(obj[key], refs);
             }
 
             refs.erase(insert_ret.first);
