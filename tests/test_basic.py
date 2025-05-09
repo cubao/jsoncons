@@ -8,7 +8,7 @@ import pybind11_jsoncons as m
 
 
 def test_version():
-    assert m.__version__ == "0.1.0"
+    assert m.__version__ == "0.1.1"
 
 
 def test_repl():
@@ -108,12 +108,28 @@ def test_json_query():
     data = m.msgpack_decode(export)
     assert json.loads(data) == [["Bob", 20], ["Fred", 25], ["George", 30]]
 
+    with pytest.raises(RuntimeError) as excinfo:
+        jql.setup_transforms(["inval1d expr"])
+    assert "Syntax error at" in repr(excinfo)
+
 
 def test_json_type():
     obj = m.Json().from_json('{"compact":"true",         "schema":0}')
     assert obj.to_json() == '{"compact":"true","schema":0}'
     obj2 = m.Json().from_msgpack(obj.to_msgpack())
     assert obj.to_msgpack() == obj2.to_msgpack()
+    obj = m.Json().from_python({"b": 4, "a": 2})
+    assert obj.to_json() == '{"b":4,"a":2}'
+    assert obj.to_python() == {"b": 4, "a": 2}
+
+    obj = {"key": "value"}
+    obj["self"] = obj
+    with pytest.raises(ValueError) as excinfo:  # noqa: PT011
+        json.dumps(obj)
+    assert "Circular reference detected" in repr(excinfo)
+    with pytest.raises(RuntimeError) as excinfo:
+        m.Json().from_python(obj)
+    assert "Circular reference detected" in repr(excinfo)
 
 
 def test_json_query_json():

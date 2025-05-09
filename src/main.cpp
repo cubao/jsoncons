@@ -17,7 +17,7 @@
 #include <memory>
 #include <deque>
 
-using jsoncons::json;
+using json = jsoncons::ojson; // using json = jsoncons::json;
 namespace jmespath = jsoncons::jmespath;
 namespace msgpack = jsoncons::msgpack;
 
@@ -25,7 +25,179 @@ namespace py = pybind11;
 using rvp = py::return_value_policy;
 using namespace pybind11::literals;
 
-// https://github.com/danielaparker/jsoncons/blob/master/doc/ref/jmespath/jmespath.md
+// Type conversion between jsoncons::json and py::dict
+// https://github.com/pybind/pybind11_json/blob/master/include/pybind11_json/pybind11_json.hpp
+namespace pyjson
+{
+    inline py::object from_json(const json& j)
+    {
+        if (j.is_null())
+        {
+            return py::none();
+        }
+        else if (j.is_bool())
+        {
+            return py::bool_(j.as_bool());
+        }
+        else if (j.is_int64())
+        {
+            return py::int_(j.as_integer<int64_t>());
+        }
+        else if (j.is_uint64())
+        {
+            return py::int_(j.as_integer<uint64_t>());
+        }
+        else if (j.is_double())
+        {
+            return py::float_(j.as_double());
+        }
+        else if (j.is_string())
+        {
+            return py::str(j.as_string());
+        }
+        else if (j.is_array())
+        {
+            py::list obj(j.size());
+            for (std::size_t i = 0; i < j.size(); i++)
+            {
+                obj[i] = from_json(j[i]);
+            }
+            return obj;
+        }
+        else // Object
+        {
+            py::dict obj;
+            for (const auto& item : j.object_range())
+            {
+                obj[py::str(item.key())] = from_json(item.value());
+            }
+            return obj;
+        }
+    }
+
+    inline json to_json(const py::handle& obj, std::set<const PyObject*>& refs)
+    {
+        if (obj.ptr() == nullptr || obj.is_none())
+        {
+            return json::null();
+        }
+        if (py::isinstance<py::bool_>(obj))
+        {
+            return obj.cast<bool>();
+        }
+        if (py::isinstance<py::int_>(obj))
+        {
+            try
+            {
+                int64_t s = obj.cast<int64_t>();
+                if (py::int_(s).equal(obj))
+                {
+                    return s;
+                }
+            }
+            catch (...)
+            {
+            }
+            try
+            {
+                uint64_t u = obj.cast<uint64_t>();
+                if (py::int_(u).equal(obj))
+                {
+                    return u;
+                }
+            }
+            catch (...)
+            {
+            }
+            throw std::runtime_error("to_json received an integer out of range for both int64_t and uint64_t type: " + py::repr(obj).cast<std::string>());
+        }
+        if (py::isinstance<py::float_>(obj))
+        {
+            return obj.cast<double>();
+        }
+        if (py::isinstance<py::bytes>(obj))
+        {
+            py::module base64 = py::module::import("base64");
+            return base64.attr("b64encode")(obj).attr("decode")("utf-8").cast<std::string>();
+        }
+        if (py::isinstance<py::str>(obj))
+        {
+            return obj.cast<std::string>();
+        }
+        if (py::isinstance<py::tuple>(obj) || py::isinstance<py::list>(obj))
+        {
+            auto insert_ret = refs.insert(obj.ptr());
+            if (!insert_ret.second) {
+                throw std::runtime_error("Circular reference detected");
+            }
+
+            auto out = json::array();
+            for (const py::handle value : obj)
+            {
+                out.push_back(to_json(value, refs));
+            }
+
+            refs.erase(insert_ret.first);
+
+            return out;
+        }
+        if (py::isinstance<py::dict>(obj))
+        {
+            auto insert_ret = refs.insert(obj.ptr());
+            if (!insert_ret.second) {
+                throw std::runtime_error("Circular reference detected");
+            }
+
+            auto out = json::object();
+            for (const py::handle key : obj)
+            {
+                out.try_emplace(py::str(key).cast<std::string>(), to_json(obj[key], refs));
+            }
+
+            refs.erase(insert_ret.first);
+
+            return out;
+        }
+
+        throw std::runtime_error("to_json not implemented for this type of object: " + py::repr(obj).cast<std::string>());
+    }
+
+    inline json to_json(const py::handle& obj)
+    {
+        std::set<const PyObject*> refs;
+        return to_json(obj, refs);
+    }
+}
+
+/*
+namespace pybind11 { namespace detail {
+    template <> struct type_caster<json> {
+    public:
+        PYBIND11_TYPE_CASTER(json, _("json"));
+
+        bool load(handle src, bool)
+        {
+            try
+            {
+                value = pyjson::to_json(src);
+                return true;
+            }
+            catch (...)
+            {
+                return false;
+            }
+        }
+
+        static handle cast(json src, return_value_policy policy, handle parent)
+        {
+            (void)policy;
+            (void)parent;
+            object obj = pyjson::from_json(src);
+            return obj.release();
+        }
+    };
+}} // namespace pybind11::detail
+*/
 
 /**
  * A REPL (Read-Eval-Print Loop) for evaluating JMESPath expressions on JSON data.
@@ -153,8 +325,14 @@ struct JsonQuery {
      * @return True if processing succeeded, false otherwise
      */
     bool process_json(const json &doc, bool skip_predicate = false, bool raise_error = false) {
+        if (!predicate_expr_) {
+            skip_predicate = true;
+        }
         if (!skip_predicate && !__matches(doc)) {
             return false;
+        }
+        if (transforms_expr_.empty()) {
+            throw std::runtime_error("No transform expressions set");
         }
         std::vector<json> row;
         row.reserve(transforms_expr_.size());
@@ -246,6 +424,50 @@ PYBIND11_MODULE(_core, m) {
     .def(py::init<>(), R"pbdoc(
         Create a new Json object.
     )pbdoc")
+    // from/to_python
+    .def("from_python", [](json &self, const py::handle &obj) -> json & {
+        self = pyjson::to_json(obj);
+        return self;
+    }, "object"_a, rvp::reference_internal, R"pbdoc(
+        Convert a Python object to a JSON object.
+
+        This method converts various Python types to their JSON equivalents:
+        - None -> null
+        - bool -> boolean
+        - int -> integer
+        - float -> number
+        - str -> string
+        - list/tuple -> array
+        - dict -> object
+
+        Args:
+            object: Python object to convert
+
+        Returns:
+            Json: Reference to self with converted data
+
+        Raises:
+            RuntimeError: If the Python object contains circular references or unsupported types
+    )pbdoc")
+    .def("to_python", [](const json &self) -> py::handle {
+        py::object obj = pyjson::from_json(self);
+        return obj.release();
+    }, R"pbdoc(
+        Convert a JSON object to a Python object.
+
+        This method converts JSON types to their Python equivalents:
+        - null -> None
+        - boolean -> bool
+        - integer -> int
+        - number -> float
+        - string -> str
+        - array -> list
+        - object -> dict
+
+        Returns:
+            object: Python object representation of the JSON data
+    )pbdoc")
+
     // from/to_json
     .def("from_json", [](json &self, const std::string &input) -> json & {
         self = json::parse(input);
@@ -331,13 +553,13 @@ PYBIND11_MODULE(_core, m) {
         .def(py::init<>(), R"pbdoc(
             Create a new JsonQuery instance.
         )pbdoc")
-        .def("setup_predicate", &JsonQuery::setup_predicate, R"pbdoc(
+        .def("setup_predicate", &JsonQuery::setup_predicate, "predicate"_a, R"pbdoc(
             Set up the predicate expression used for filtering.
 
             Args:
                 predicate: JMESPath predicate expression
         )pbdoc")
-        .def("setup_transforms", &JsonQuery::setup_transforms, R"pbdoc(
+        .def("setup_transforms", &JsonQuery::setup_transforms, "transforms"_a, R"pbdoc(
             Set up transform expressions used for data transformation.
 
             Args:
@@ -438,6 +660,13 @@ PYBIND11_MODULE(_core, m) {
         Returns:
             str: JSON string representation
     )pbdoc");
+
+    // m.def("dumps", [](const json &json_val) -> std::string {
+    //     return json_val.to_string();
+    // });
+    // m.def("loads", [](const std::string &json_text) -> json {
+    //     return json::parse(json_text);
+    // });
 
 #ifdef VERSION_INFO
     m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);
