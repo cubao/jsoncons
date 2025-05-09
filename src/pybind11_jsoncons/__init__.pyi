@@ -16,7 +16,7 @@ Pybind11 bindings for jsoncons
 
 from __future__ import annotations
 
-from typing import overload
+from typing import Any, overload
 
 __doc__: str
 __version__: str
@@ -66,6 +66,25 @@ class Json:
 
         Returns:
             bytes: MessagePack binary data
+        """
+
+    def from_python(self, obj: Any) -> Json:
+        """
+        Convert a Python object to a JSON object.
+
+        Args:
+            obj: Python object to convert
+
+        Returns:
+            Json: Reference to self
+        """
+
+    def to_python(self) -> Any:
+        """
+        Convert a JSON object to a Python object.
+
+        Returns:
+            Any: Python object representation of the JSON data
         """
 
 class JsonQueryRepl:

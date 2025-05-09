@@ -325,6 +325,9 @@ struct JsonQuery {
      * @return True if processing succeeded, false otherwise
      */
     bool process_json(const json &doc, bool skip_predicate = false, bool raise_error = false) {
+        if (!predicate_expr_) {
+            skip_predicate = true;
+        }
         if (!skip_predicate && !__matches(doc)) {
             return false;
         }
