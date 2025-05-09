@@ -25,7 +25,70 @@ namespace py = pybind11;
 using rvp = py::return_value_policy;
 using namespace pybind11::literals;
 
-// https://github.com/danielaparker/jsoncons/blob/master/doc/ref/jmespath/jmespath.md
+// Type conversion between jsoncons::json and py::dict
+namespace pybind11 { namespace detail {
+    template <> struct type_caster<jsoncons::json> {
+    public:
+        PYBIND11_TYPE_CASTER(jsoncons::json, _("json"));
+
+        bool load(handle src, bool) {
+            PyObject *source = src.ptr();
+            if (!PyDict_Check(source)) {
+                return false;
+            }
+
+            value = jsoncons::json::object();
+            PyObject *key, *val;
+            Py_ssize_t pos = 0;
+
+            while (PyDict_Next(source, &pos, &key, &val)) {
+                std::string k = py::str(key).cast<std::string>();
+                if (PyDict_Check(val)) {
+                    value[k] = py::cast<jsoncons::json>(val);
+                } else if (PyList_Check(val)) {
+                    value[k] = py::cast<jsoncons::json>(val);
+                } else if (PyUnicode_Check(val)) {
+                    value[k] = py::cast<std::string>(val);
+                } else if (PyLong_Check(val)) {
+                    value[k] = py::cast<int64_t>(val);
+                } else if (PyFloat_Check(val)) {
+                    value[k] = py::cast<double>(val);
+                } else if (PyBool_Check(val)) {
+                    value[k] = py::cast<bool>(val);
+                } else if (val == Py_None) {
+                    value[k] = jsoncons::json::null();
+                }
+            }
+            return true;
+        }
+
+        static handle cast(jsoncons::json src, return_value_policy policy, handle parent) {
+            py::dict d;
+            if (src.is_object()) {
+                for (const auto& item : src.object_range()) {
+                    const auto& key = item.key();
+                    const auto& val = item.value();
+                    if (val.is_object()) {
+                        d[py::str(key)] = py::cast(val);
+                    } else if (val.is_array()) {
+                        d[py::str(key)] = py::cast(val);
+                    } else if (val.is_string()) {
+                        d[py::str(key)] = py::cast(val.as_string());
+                    } else if (val.is_int64()) {
+                        d[py::str(key)] = py::cast(val.as_int64());
+                    } else if (val.is_double()) {
+                        d[py::str(key)] = py::cast(val.as_double());
+                    } else if (val.is_bool()) {
+                        d[py::str(key)] = py::cast(val.as_bool());
+                    } else if (val.is_null()) {
+                        d[py::str(key)] = py::none();
+                    }
+                }
+            }
+            return d.release();
+        }
+    };
+}} // namespace pybind11::detail
 
 /**
  * A REPL (Read-Eval-Print Loop) for evaluating JMESPath expressions on JSON data.
