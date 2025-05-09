@@ -26,66 +26,171 @@ using rvp = py::return_value_policy;
 using namespace pybind11::literals;
 
 // Type conversion between jsoncons::json and py::dict
+// https://github.com/pybind/pybind11_json/blob/master/include/pybind11_json/pybind11_json.hpp
+namespace pyjson
+{
+    inline py::object from_json(const jsoncons::json& j)
+    {
+        if (j.is_null())
+        {
+            return py::none();
+        }
+        else if (j.is_bool())
+        {
+            return py::bool_(j.as_bool());
+        }
+        else if (j.is_int64())
+        {
+            return py::int_(j.as_int64());
+        }
+        else if (j.is_uint64())
+        {
+            return py::int_(j.as_uint64());
+        }
+        else if (j.is_double())
+        {
+            return py::float_(j.as_double());
+        }
+        else if (j.is_string())
+        {
+            return py::str(j.as_string());
+        }
+        else if (j.is_array())
+        {
+            py::list obj(j.size());
+            for (std::size_t i = 0; i < j.size(); i++)
+            {
+                obj[i] = from_json(j[i]);
+            }
+            return obj;
+        }
+        else // Object
+        {
+            py::dict obj;
+            for (const auto& item : j.object_range())
+            {
+                obj[py::str(item.key())] = from_json(item.value());
+            }
+            return obj;
+        }
+    }
+
+    inline jsoncons::json to_json(const py::handle& obj, std::set<const PyObject*>& refs)
+    {
+        if (obj.ptr() == nullptr || obj.is_none())
+        {
+            return jsoncons::json::null();
+        }
+        if (py::isinstance<py::bool_>(obj))
+        {
+            return obj.cast<bool>();
+        }
+        if (py::isinstance<py::int_>(obj))
+        {
+            try
+            {
+                int64_t s = obj.cast<int64_t>();
+                if (py::int_(s).equal(obj))
+                {
+                    return s;
+                }
+            }
+            catch (...)
+            {
+            }
+            try
+            {
+                uint64_t u = obj.cast<uint64_t>();
+                if (py::int_(u).equal(obj))
+                {
+                    return u;
+                }
+            }
+            catch (...)
+            {
+            }
+            throw std::runtime_error("to_json received an integer out of range for both int64_t and uint64_t type: " + py::repr(obj).cast<std::string>());
+        }
+        if (py::isinstance<py::float_>(obj))
+        {
+            return obj.cast<double>();
+        }
+        if (py::isinstance<py::bytes>(obj))
+        {
+            py::module base64 = py::module::import("base64");
+            return base64.attr("b64encode")(obj).attr("decode")("utf-8").cast<std::string>();
+        }
+        if (py::isinstance<py::str>(obj))
+        {
+            return obj.cast<std::string>();
+        }
+        if (py::isinstance<py::tuple>(obj) || py::isinstance<py::list>(obj))
+        {
+            auto insert_ret = refs.insert(obj.ptr());
+            if (!insert_ret.second) {
+                throw std::runtime_error("Circular reference detected");
+            }
+
+            auto out = jsoncons::json::array();
+            for (const py::handle value : obj)
+            {
+                out.push_back(to_json(value, refs));
+            }
+
+            refs.erase(insert_ret.first);
+
+            return out;
+        }
+        if (py::isinstance<py::dict>(obj))
+        {
+            auto insert_ret = refs.insert(obj.ptr());
+            if (!insert_ret.second) {
+                throw std::runtime_error("Circular reference detected");
+            }
+
+            auto out = jsoncons::json::object();
+            for (const py::handle key : obj)
+            {
+                out[py::str(key).cast<std::string>()] = to_json(obj[key], refs);
+            }
+
+            refs.erase(insert_ret.first);
+
+            return out;
+        }
+
+        throw std::runtime_error("to_json not implemented for this type of object: " + py::repr(obj).cast<std::string>());
+    }
+
+    inline jsoncons::json to_json(const py::handle& obj)
+    {
+        std::set<const PyObject*> refs;
+        return to_json(obj, refs);
+    }
+}
+
 namespace pybind11 { namespace detail {
     template <> struct type_caster<jsoncons::json> {
     public:
         PYBIND11_TYPE_CASTER(jsoncons::json, _("json"));
 
-        bool load(handle src, bool) {
-            PyObject *source = src.ptr();
-            if (!PyDict_Check(source)) {
+        bool load(handle src, bool)
+        {
+            try
+            {
+                value = pyjson::to_json(src);
+                return true;
+            }
+            catch (...)
+            {
                 return false;
             }
-
-            value = jsoncons::json::object();
-            PyObject *key, *val;
-            Py_ssize_t pos = 0;
-
-            while (PyDict_Next(source, &pos, &key, &val)) {
-                std::string k = py::str(key).cast<std::string>();
-                if (PyDict_Check(val)) {
-                    value[k] = py::cast<jsoncons::json>(val);
-                } else if (PyList_Check(val)) {
-                    value[k] = py::cast<jsoncons::json>(val);
-                } else if (PyUnicode_Check(val)) {
-                    value[k] = py::cast<std::string>(val);
-                } else if (PyLong_Check(val)) {
-                    value[k] = py::cast<int64_t>(val);
-                } else if (PyFloat_Check(val)) {
-                    value[k] = py::cast<double>(val);
-                } else if (PyBool_Check(val)) {
-                    value[k] = py::cast<bool>(val);
-                } else if (val == Py_None) {
-                    value[k] = jsoncons::json::null();
-                }
-            }
-            return true;
         }
 
-        static handle cast(jsoncons::json src, return_value_policy policy, handle parent) {
-            py::dict d;
-            if (src.is_object()) {
-                for (const auto& item : src.object_range()) {
-                    const auto& key = item.key();
-                    const auto& val = item.value();
-                    if (val.is_object()) {
-                        d[py::str(key)] = py::cast(val);
-                    } else if (val.is_array()) {
-                        d[py::str(key)] = py::cast(val);
-                    } else if (val.is_string()) {
-                        d[py::str(key)] = py::cast(val.as_string());
-                    } else if (val.is_int64()) {
-                        d[py::str(key)] = py::cast(val.as_int64());
-                    } else if (val.is_double()) {
-                        d[py::str(key)] = py::cast(val.as_double());
-                    } else if (val.is_bool()) {
-                        d[py::str(key)] = py::cast(val.as_bool());
-                    } else if (val.is_null()) {
-                        d[py::str(key)] = py::none();
-                    }
-                }
-            }
-            return d.release();
+        static handle cast(jsoncons::json src, return_value_policy /* policy */, handle /* parent */)
+        {
+            object obj = pyjson::from_json(src);
+            return obj.release();
         }
     };
 }} // namespace pybind11::detail
