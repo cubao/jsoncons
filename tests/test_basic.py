@@ -114,6 +114,9 @@ def test_json_type():
     assert obj.to_json() == '{"compact":"true","schema":0}'
     obj2 = m.Json().from_msgpack(obj.to_msgpack())
     assert obj.to_msgpack() == obj2.to_msgpack()
+    obj = m.Json().from_python({"b": 4, "a": 2})
+    assert obj.to_json() == '{"b":4,"a":2}'
+    assert obj.to_python() == {"b": 4, "a": 2}
 
 
 def test_json_query_json():
@@ -135,6 +138,3 @@ def test_json_query_json():
 
 
 # pytest -vs tests/test_basic.py
-
-m.testme({"key": 5, "aa": 6})
-print()

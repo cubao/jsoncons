@@ -17,8 +17,7 @@
 #include <memory>
 #include <deque>
 
-using json = jsoncons::json;
-// using json = jsoncons::ojson;
+using json = jsoncons::ojson; // using json = jsoncons::json;
 namespace jmespath = jsoncons::jmespath;
 namespace msgpack = jsoncons::msgpack;
 
@@ -188,8 +187,10 @@ namespace pybind11 { namespace detail {
             }
         }
 
-        static handle cast(json src, return_value_policy /* policy */, handle /* parent */)
+        static handle cast(json src, return_value_policy policy, handle parent)
         {
+            (void)policy;
+            (void)parent;
             object obj = pyjson::from_json(src);
             return obj.release();
         }
@@ -415,6 +416,20 @@ PYBIND11_MODULE(_core, m) {
     .def(py::init<>(), R"pbdoc(
         Create a new Json object.
     )pbdoc")
+    // from/to_python
+    .def("from_python", [](json &self, const py::handle &obj) -> json & {
+        self = pyjson::to_json(obj);
+        return self;
+    }, "object"_a, rvp::reference_internal, R"pbdoc(
+        TODO
+    )pbdoc")
+    .def("to_python", [](const json &self) -> py::handle {
+        py::object obj = pyjson::from_json(self);
+        return obj.release();
+    }, R"pbdoc(
+        TODO
+    )pbdoc")
+
     // from/to_json
     .def("from_json", [](json &self, const std::string &input) -> json & {
         self = json::parse(input);
@@ -608,12 +623,12 @@ PYBIND11_MODULE(_core, m) {
             str: JSON string representation
     )pbdoc");
 
-    m.def("dumps", [](const json &json_val) -> std::string {
-        return json_val.to_string();
-    });
-    m.def("loads", [](const std::string &json_text) -> std::string {
-        return json::parse(json_text);
-    });
+    // m.def("dumps", [](const json &json_val) -> std::string {
+    //     return json_val.to_string();
+    // });
+    // m.def("loads", [](const std::string &json_text) -> json {
+    //     return json::parse(json_text);
+    // });
 
 #ifdef VERSION_INFO
     m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);
