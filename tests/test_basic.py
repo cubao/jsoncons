@@ -108,6 +108,10 @@ def test_json_query():
     data = m.msgpack_decode(export)
     assert json.loads(data) == [["Bob", 20], ["Fred", 25], ["George", 30]]
 
+    with pytest.raises(RuntimeError) as excinfo:
+        jql.setup_transforms(["inval1d expr"])
+    assert "Syntax error at" in repr(excinfo)
+
 
 def test_json_type():
     obj = m.Json().from_json('{"compact":"true",         "schema":0}')
