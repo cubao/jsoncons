@@ -8,7 +8,7 @@ import pybind11_jsoncons as m
 
 
 def test_version():
-    assert m.__version__ == "0.1.1"
+    assert m.__version__ == "0.1.2"
 
 
 def test_repl():
@@ -102,6 +102,11 @@ def test_json_query():
     assert not repl.debug
     assert repl.eval("age == `20`") == "true"
 
+    expr = m.JMESPathExpr.build("age == `20`")
+    assert isinstance(expr, m.JMESPathExpr)
+    assert expr.evaluate(m.Json().from_python(people[1])).to_python()
+    assert repl.eval_expr(expr).to_python()
+
     jql = m.JsonQuery()
     with pytest.raises(RuntimeError) as excinfo:
         jql.setup_predicate("[*].[")
@@ -158,5 +163,3 @@ def test_json_query_json():
 
 
 # pytest -vs tests/test_basic.py
-
-test_json_query()

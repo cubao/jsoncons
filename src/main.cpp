@@ -227,6 +227,19 @@ struct JsonQueryRepl {
     }
 
     /**
+     * Evaluate a JMESPath expression against the JSON document.
+     * @param expr JMESPath expression
+     * @return Result of the evaluation as a json object
+     */
+    json eval_expr(const jmespath_expr_type &expr) const {
+        auto result = expr.evaluate(doc, params_);
+        if (debug) {
+            std::cerr << pretty_print(result) << std::endl;
+        }
+        return result;
+    }
+
+    /**
      * Add parameters for JMESPath evaluation.
      * @param key Parameter key
      * @param value Parameter value as JSON string
@@ -395,7 +408,6 @@ private:
     std::vector<std::unique_ptr<jmespath::jmespath_expression<json>>> transforms_expr_;
     std::map<std::string, json> params_;
 
-
     std::deque<std::vector<json>> outputs_;
 
     bool __matches(const json &msg) const {
@@ -533,6 +545,15 @@ PYBIND11_MODULE(_core, m) {
 
             Returns:
                 str: Result of the evaluation as a string
+        )pbdoc")
+        .def("eval_expr", &JsonQueryRepl::eval_expr, "expr"_a, R"pbdoc(
+            Evaluate a JMESPath expression against the JSON document.
+
+            Args:
+                expr: JMESPath expression
+
+            Returns:
+                json: Result of the evaluation as a json object
         )pbdoc")
         .def("add_params", &JsonQueryRepl::add_params, "key"_a, "value"_a, R"pbdoc(
             Add parameters for JMESPath evaluation.
@@ -675,7 +696,7 @@ PYBIND11_MODULE(_core, m) {
                 json: Result of the evaluation
         )pbdoc")
         //
-        .static_def("build", [](const std::string &expr_text) -> jmespath_expr_type {
+        .def_static("build", [](const std::string &expr_text) -> jmespath_expr_type {
             return jmespath::make_expression<json>(expr_text);
         }, "expr_text"_a, R"pbdoc(
             Create a new JMESPath expression.

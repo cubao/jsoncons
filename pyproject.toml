@@ -6,8 +6,8 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "pybind11_jsoncons"
-version = "0.1.1"
-description="python binding for jsoncons (only what I needed for now)"
+version = "0.1.2"
+description="python binding for jsoncons + msgpack + jmespath (only what I needed for now)"
 readme = "README.md"
 authors = [
   { name = "zhixiong.tang", email = "dvorak4tzx@email.com" },
