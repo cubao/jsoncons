@@ -72,16 +72,37 @@ class Json:
         """
         Convert a Python object to a JSON object.
 
+        This method converts various Python types to their JSON equivalents:
+        - None -> null
+        - bool -> boolean
+        - int -> integer
+        - float -> number
+        - str -> string
+        - list/tuple -> array
+        - dict -> object
+
         Args:
             obj: Python object to convert
 
         Returns:
-            Json: Reference to self
+            Json: Reference to self with converted data
+
+        Raises:
+            RuntimeError: If the Python object contains circular references or unsupported types
         """
 
     def to_python(self) -> Any:
         """
         Convert a JSON object to a Python object.
+
+        This method converts JSON types to their Python equivalents:
+        - null -> None
+        - boolean -> bool
+        - integer -> int
+        - number -> float
+        - string -> str
+        - array -> list
+        - object -> dict
 
         Returns:
             Any: Python object representation of the JSON data
@@ -120,6 +141,17 @@ class JsonQueryRepl:
 
         Returns:
             str: Result of the evaluation as a string
+        """
+
+    def eval_expr(self, expr: JMESPathExpr) -> Json:
+        """
+        Evaluate a JMESPath expression against the JSON document.
+
+        Args:
+            expr: JMESPath expression
+
+        Returns:
+            Json: Result of the evaluation as a json object
         """
 
     def add_params(self, key: str, value: str) -> None:
@@ -239,6 +271,34 @@ class JsonQuery:
     def clear(self) -> None:
         """
         Clear all processed data.
+        """
+
+class JMESPathExpr:
+    """
+    A class representing a compiled JMESPath expression.
+    """
+
+    def evaluate(self, doc: Json) -> Json:
+        """
+        Evaluate the JMESPath expression against a JSON document.
+
+        Args:
+            doc: JSON document
+
+        Returns:
+            Json: Result of the evaluation
+        """
+
+    @staticmethod
+    def build(expr_text: str) -> JMESPathExpr:
+        """
+        Create a new JMESPath expression.
+
+        Args:
+            expr_text: JMESPath expression text
+
+        Returns:
+            JMESPathExpr: Compiled JMESPath expression
         """
 
 def msgpack_decode(msgpack_bytes: bytes) -> str:

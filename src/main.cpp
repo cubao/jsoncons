@@ -20,6 +20,7 @@
 using json = jsoncons::ojson; // using json = jsoncons::json;
 namespace jmespath = jsoncons::jmespath;
 namespace msgpack = jsoncons::msgpack;
+using jmespath_expr_type = jmespath::jmespath_expression<json>;
 
 namespace py = pybind11;
 using rvp = py::return_value_policy;
@@ -226,6 +227,19 @@ struct JsonQueryRepl {
     }
 
     /**
+     * Evaluate a JMESPath expression against the JSON document.
+     * @param expr JMESPath expression
+     * @return Result of the evaluation as a json object
+     */
+    json eval_expr(const jmespath_expr_type &expr) const {
+        auto result = expr.evaluate(doc, params_);
+        if (debug) {
+            std::cerr << pretty_print(result) << std::endl;
+        }
+        return result;
+    }
+
+    /**
      * Add parameters for JMESPath evaluation.
      * @param key Parameter key
      * @param value Parameter value as JSON string
@@ -394,9 +408,13 @@ private:
     std::vector<std::unique_ptr<jmespath::jmespath_expression<json>>> transforms_expr_;
     std::map<std::string, json> params_;
 
-
     std::deque<std::vector<json>> outputs_;
 
+    /**
+     * Internal method to check if a JSON document matches the predicate.
+     * @param msg JSON document to check
+     * @return True if the document matches the predicate, false otherwise
+     */
     bool __matches(const json &msg) const {
         auto ret = predicate_expr_->evaluate(msg, params_);
         return /*ret.is_bool() && */ ret.as_bool();
@@ -533,6 +551,15 @@ PYBIND11_MODULE(_core, m) {
             Returns:
                 str: Result of the evaluation as a string
         )pbdoc")
+        .def("eval_expr", &JsonQueryRepl::eval_expr, "expr"_a, R"pbdoc(
+            Evaluate a JMESPath expression against the JSON document.
+
+            Args:
+                expr: JMESPath expression
+
+            Returns:
+                json: Result of the evaluation as a json object
+        )pbdoc")
         .def("add_params", &JsonQueryRepl::add_params, "key"_a, "value"_a, R"pbdoc(
             Add parameters for JMESPath evaluation.
 
@@ -660,6 +687,26 @@ PYBIND11_MODULE(_core, m) {
         Returns:
             str: JSON string representation
     )pbdoc");
+
+    py::class_<jmespath_expr_type>(m, "JMESPathExpr", py::module_local(), py::dynamic_attr()) //
+        .def("evaluate", [](const jmespath_expr_type &self, const json &doc) -> json {
+            return self.evaluate(doc);
+        }, "doc"_a, R"pbdoc(
+            Evaluate the JMESPath expression against a JSON document.
+
+            Args:
+                doc: JSON document
+
+            Returns:
+                json: Result of the evaluation
+        )pbdoc")
+        //
+        .def_static("build", [](const std::string &expr_text) -> jmespath_expr_type {
+            return jmespath::make_expression<json>(expr_text);
+        }, "expr_text"_a, R"pbdoc(
+            Create a new JMESPath expression.
+        )pbdoc")
+        ;
 
     // m.def("dumps", [](const json &json_val) -> std::string {
     //     return json_val.to_string();
