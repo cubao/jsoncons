@@ -410,6 +410,11 @@ private:
 
     std::deque<std::vector<json>> outputs_;
 
+    /**
+     * Internal method to check if a JSON document matches the predicate.
+     * @param msg JSON document to check
+     * @return True if the document matches the predicate, false otherwise
+     */
     bool __matches(const json &msg) const {
         auto ret = predicate_expr_->evaluate(msg, params_);
         return /*ret.is_bool() && */ ret.as_bool();
