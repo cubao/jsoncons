@@ -95,6 +95,13 @@ def test_json_query():
     assert json.loads(repl.eval("name")) == "Baby"
     assert not json.loads(repl.eval("age >= `18`"))
 
+    assert repl.doc.to_json() == '{"age":5,"other":"too young","name":"Baby"}'
+    repl.doc.from_python(people[1])
+    assert repl.doc.to_json() == '{"age":20,"other":"foo","name":"Bob"}'
+    repl.debug = False
+    assert not repl.debug
+    assert repl.eval("age == `20`") == "true"
+
     jql = m.JsonQuery()
     with pytest.raises(RuntimeError) as excinfo:
         jql.setup_predicate("[*].[")
@@ -151,3 +158,5 @@ def test_json_query_json():
 
 
 # pytest -vs tests/test_basic.py
+
+test_json_query()

@@ -20,6 +20,7 @@
 using json = jsoncons::ojson; // using json = jsoncons::json;
 namespace jmespath = jsoncons::jmespath;
 namespace msgpack = jsoncons::msgpack;
+using jmespath_expr_type = jmespath::jmespath_expression<json>;
 
 namespace py = pybind11;
 using rvp = py::return_value_policy;
@@ -660,6 +661,26 @@ PYBIND11_MODULE(_core, m) {
         Returns:
             str: JSON string representation
     )pbdoc");
+
+    py::class_<jmespath_expr_type>(m, "JMESPathExpr", py::module_local(), py::dynamic_attr()) //
+        .def("evaluate", [](const jmespath_expr_type &self, const json &doc) -> json {
+            return self.evaluate(doc);
+        }, "doc"_a, R"pbdoc(
+            Evaluate the JMESPath expression against a JSON document.
+
+            Args:
+                doc: JSON document
+
+            Returns:
+                json: Result of the evaluation
+        )pbdoc")
+        //
+        .static_def("build", [](const std::string &expr_text) -> jmespath_expr_type {
+            return jmespath::make_expression<json>(expr_text);
+        }, "expr_text"_a, R"pbdoc(
+            Create a new JMESPath expression.
+        )pbdoc")
+        ;
 
     // m.def("dumps", [](const json &json_val) -> std::string {
     //     return json_val.to_string();
