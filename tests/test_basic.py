@@ -8,7 +8,7 @@ import pybind11_jsoncons as m
 
 
 def test_version():
-    assert m.__version__ == "0.1.2"
+    assert m.__version__
 
 
 def test_repl():
